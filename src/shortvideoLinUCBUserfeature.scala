@@ -5,9 +5,26 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 object shortvideoLinUCBUserfeature {
-  val spark = SparkSession.builder.appName("shortvideoLinUCBUserfeature").enableHiveSupport().getOrCreate()
-  import spark.implicits._
-  import spark.sql
+
+  def main(args: Array[String]): Unit = {
+    val spark = SparkSession.builder.appName("shortvideoLinUCBUserfeature").enableHiveSupport().getOrCreate()
+    import spark.implicits._
+    import spark.sql
+
+    val shortvideoLinUCBUserfeature = new shortvideoLinUCBUserfeature(spark)
+    shortvideoLinUCBUserfeature.runMain()
+  }
+}
+
+class shortvideoLinUCBUserfeature(spark: SparkSession){
+  def runMain(): Unit ={
+    val dt = getYesterday().toString
+    //val dt="2019-01-24"
+    val data = loaddata(dt)
+    val assembled_df = feature(data)
+    //train(assembled_df)
+    cluster(assembled_df,dt)
+  }
 
   def getYesterday():String= {
     var dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
@@ -19,7 +36,7 @@ object shortvideoLinUCBUserfeature {
 
   def loaddata(dt:String)={
     val load_sql = s"select * from temp.shortvideo_user_matrix_forcluster where dt='$dt'"
-    val data = sql(load_sql)
+    val data = spark.sql(load_sql)
     data
   }
 
@@ -55,12 +72,4 @@ object shortvideoLinUCBUserfeature {
     spark.sql(insert_sql)
   }
 
-  def main(): Unit ={
-    val dt = getYesterday().toString
-    //val dt="2019-01-24"
-    val data = loaddata(dt)
-    val assembled_df = feature(data)
-    //train(assembled_df)
-    cluster(assembled_df,dt)
-  }
 }
