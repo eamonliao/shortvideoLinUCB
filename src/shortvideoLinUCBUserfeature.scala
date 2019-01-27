@@ -1,14 +1,24 @@
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.ml.clustering.{KMeans,KMeansModel}
 import org.apache.spark.ml.feature.VectorAssembler
+import java.text.SimpleDateFormat
+import java.util.Calendar
 
 object shortvideoLinUCBUserfeature {
   val spark = SparkSession.builder.appName("shortvideoLinUCBUserfeature").enableHiveSupport().getOrCreate()
   import spark.implicits._
   import spark.sql
 
+  def getYesterday():String= {
+    var dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    var cal: Calendar = Calendar.getInstance()
+    cal.add(Calendar.DATE, -1)
+    var yesterday = dateFormat.format(cal.getTime())
+    yesterday
+  }
+
   def loaddata(dt:String)={
-    val load_sql = s"select * from temp.shortvideo_user_matrix where dt='$dt'"
+    val load_sql = s"select * from temp.shortvideo_user_matrix_forcluster where dt='$dt'"
     val data = sql(load_sql)
     data
   }
@@ -37,18 +47,17 @@ object shortvideoLinUCBUserfeature {
   def cluster(assembled_df:DataFrame,dt:String): Unit ={
     val model_path = "/user/LinUCB/model"
     val clusters = KMeansModel.load(model_path + "/LinUCBclusters.model")
-
     val results = clusters.transform(assembled_df)
 
     results.createOrReplaceTempView("results")
-
     // 分词结果插入hive表中
-    val insert_sql=s"insert overwrite table temp.shortvideo_user_matrix_aftercluster partition(dt='$dt') select kgid,features,label from results"
+    val insert_sql=s"insert overwrite table temp.shortvideo_user_matrix_aftercluster partition(dt='$dt') select kgid,label from results"
     spark.sql(insert_sql)
   }
 
   def main(): Unit ={
-    val dt="2019-01-24"
+    val dt = getYesterday().toString
+    //val dt="2019-01-24"
     val data = loaddata(dt)
     val assembled_df = feature(data)
     //train(assembled_df)
