@@ -1,0 +1,2 @@
+# shortvideoLinUCB
+解决Bandit算法不够个性化的问题，LinUCB加上用户特征
